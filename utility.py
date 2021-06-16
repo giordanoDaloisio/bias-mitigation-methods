@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import itertools
+from IPython.display import display
 from numpy.random import default_rng
 from collections import OrderedDict
 from copy import deepcopy
@@ -219,6 +220,7 @@ def plot_syntesis(dataset, title):
     plt.ylabel(ylabel='')
     plt.xlabel(xlabel='')
     plt.title(title)
+    display(dataset.pivot(index='Dataset', values='values', columns='metrics'))
     return ax
 
 
