@@ -14,7 +14,7 @@ from aif360.metrics import BinaryLabelDatasetMetric, ClassificationMetric
 from aif360.datasets import BinaryLabelDataset
 from aif360.algorithms import Transformer
 
-sns.set_theme(style='darkgrid')
+sns.set_theme(style='whitegrid')
 
 
 # utility functions
@@ -298,7 +298,7 @@ def classify(estimator: Pipeline,
         d_test = data.subset(test)
         if debiaser:
             d_train = debiaser.fit_transform(d_train)
-            d_test = debiaser.fit_transform(d_test)
+            #d_test = debiaser.transform(d_test)
         x_train, y_train, x_test, y_test = x_y_split(d_train, d_test, sensitive_attributes)
         if sensitive_attributes:
             indexes = [d_train.feature_names.index(s) for s in sensitive_attributes]

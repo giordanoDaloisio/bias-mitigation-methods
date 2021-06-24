@@ -25,10 +25,10 @@ class Sampler(Transformer):
         self.debug = debug
 
     def predict(self, dataset):
-        pass
+        return dataset
 
     def transform(self, dataset):
-        pass
+        return dataset
 
     def fit_transform(self, dataset: BinaryLabelDataset):
         df = dataset.convert_to_dataframe()[0].copy()
