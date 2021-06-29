@@ -48,10 +48,10 @@ def compute_fairness_metrics(dataset_true, dataset_pred,
     metrics = OrderedDict()
     metrics["Balanced accuracy"] = 0.5 * (classified_metric_pred.true_positive_rate() +
                                           classified_metric_pred.true_negative_rate())
-    metrics["Statistical parity difference"] = classified_metric_pred.statistical_parity_difference()
+    metrics["Statistical parity"] = classified_metric_pred.statistical_parity_difference()
     metrics["Disparate impact"] = classified_metric_pred.disparate_impact()
-    metrics["Average odds difference"] = classified_metric_pred.average_odds_difference()
-    metrics["Equal opportunity difference"] = classified_metric_pred.equal_opportunity_difference()
+    metrics["Average odds"] = classified_metric_pred.average_odds_difference()
+    metrics["Equal opportunity"] = classified_metric_pred.equal_opportunity_difference()
     metrics["Theil index"] = classified_metric_pred.theil_index()
 
     if disp:
@@ -217,7 +217,7 @@ def plot_metrics_comparison(bias_class_metrics, rw_class_metrics, title1='', tit
 
 
 def plot_syntesis(dataset, title):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+    fig, ax = plt.subplots(1, 1, figsize=(13, 5))
     sns.barplot(data=dataset, x='metrics', y='values', hue='Dataset', ax=ax)
     plt.ylabel(ylabel='')
     plt.xlabel(xlabel='')
@@ -298,7 +298,7 @@ def classify(estimator: Pipeline,
         d_test = data.subset(test)
         if debiaser:
             d_train = debiaser.fit_transform(d_train)
-            #d_test = debiaser.transform(d_test)
+            d_test = debiaser.transform(d_test)
         x_train, y_train, x_test, y_test = x_y_split(d_train, d_test, sensitive_attributes)
         if sensitive_attributes:
             indexes = [d_train.feature_names.index(s) for s in sensitive_attributes]
