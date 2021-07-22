@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import itertools
@@ -12,7 +13,6 @@ from sklearn.model_selection import KFold
 from sklearn.pipeline import Pipeline
 from aif360.metrics import BinaryLabelDatasetMetric, ClassificationMetric
 from aif360.datasets import BinaryLabelDataset
-
 sns.set_theme(style='darkgrid')
 
 
@@ -127,7 +127,7 @@ def plot_groups_disparity(disparities):
     for d in disparities:
         sns.lineplot(data=d)
     plt.axhline(y=1, linewidth=2)
-    ax.set_ylabel('Group disparity')
+    plt.ylabel(r'$\frac{W_{exp}}{W_{obs}}$', rotation=0, labelpad=20, fontsize=20)
     return ax
 
 
