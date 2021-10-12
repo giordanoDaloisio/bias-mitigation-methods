@@ -284,6 +284,7 @@ def sample_dataset(dataframe: pd.DataFrame,
     return BinaryLabelDataset(df=df_new, protected_attribute_names=protected_attribute_names, label_names=[label])
 
 
+
 def classify(estimator: Pipeline,
              data: BinaryLabelDataset,
              priv_group: list,
