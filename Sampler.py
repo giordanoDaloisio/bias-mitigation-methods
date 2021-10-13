@@ -75,17 +75,3 @@ class Sampler(Transformer):
         df_new = sample(dataset.convert_to_dataframe()[0], dataset.protected_attribute_names,
                         dataset.label_names[0], self.round_level)
         return BinaryLabelDataset(df=df_new, protected_attribute_names=dataset.protected_attribute_names, label_names=dataset.label_names)
-
-
-def main():
-    compas = CompasDataset(features_to_drop=['age_cat'])
-    privileged_group = [{'sex': 1, 'race': 1}]
-    unprivileged_group = [{'sex': 0, 'race': 0}]
-    sampler = Sampler(round_level=2)
-    sampled_metrics = classify(
-        make_pipeline(StandardScaler(), LogisticRegression(
-            class_weight='balanced', solver='liblinear')),
-        compas, privileged_group, unprivileged_group, debiaser=sampler, n_splits=5)
-
-
-main()
