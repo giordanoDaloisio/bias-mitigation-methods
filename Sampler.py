@@ -1,16 +1,14 @@
-from sklearn.linear_model import LogisticRegression
-import os
-from utility import *
-from matplotlib.gridspec import GridSpec
-from aif360.algorithms.preprocessing import Reweighing, DisparateImpactRemover
-from aif360.datasets import CompasDataset
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.pipeline import make_pipeline
-from aif360.datasets import BinaryLabelDataset
-from aif360.algorithms import Transformer
-from IPython.display import display
 import numpy as np
+from aif360.algorithms import Transformer
+from aif360.datasets import BinaryLabelDataset
 from pandas.core.frame import DataFrame
+from utility import *
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from aif360.datasets import GermanDataset
+from utility import *
 
 
 def balance_set(w_exp, w_obs, df, tot_df, round_level=None, debug=False):
@@ -30,7 +28,7 @@ def balance_set(w_exp, w_obs, df, tot_df, round_level=None, debug=False):
     return df, disparity
 
 
-def sample(d: DataFrame, s_vars: list, label: str, round_level: float, i: int = 0, G: list = [], cond: bool = True):
+def sample(d: DataFrame, s_vars: list, label: str, round_level: float, debug: bool = False, i: int = 0, G: list = [], cond: bool = True):
     d = d.copy()
     n = len(s_vars)
     disparities = []
@@ -39,16 +37,16 @@ def sample(d: DataFrame, s_vars: list, label: str, round_level: float, i: int = 
             g = d[(cond) & (d[label] == l)]
             w_exp = (len(d[cond])/len(d)) * (len(d[d[label] == l])/len(d))
             w_obs = len(g)/len(d)
-            g_new, disp = balance_set(w_exp, w_obs, g, d, round_level)
+            g_new, disp = balance_set(w_exp, w_obs, g, d, round_level, debug)
             disparities.append(disp)
             G.append(g_new)
         return G
     else:
         s = s_vars[i]
         i = i+1
-        G1 = sample(d, s_vars, label, round_level, i,
+        G1 = sample(d, s_vars, label, round_level, debug, i,
                     G.copy(), cond=cond & (d[s] == 0))
-        G2 = sample(d, s_vars, label, round_level, i,
+        G2 = sample(d, s_vars, label, round_level, debug, i,
                     G.copy(), cond=cond & (d[s] == 1))
         G += G1
         G += G2
@@ -73,19 +71,5 @@ class Sampler(Transformer):
     def fit_transform(self, dataset: BinaryLabelDataset):
 
         df_new = sample(dataset.convert_to_dataframe()[0], dataset.protected_attribute_names,
-                        dataset.label_names[0], self.round_level)
+                        dataset.label_names[0], self.round_level, self.debug, 0, [], True)
         return BinaryLabelDataset(df=df_new, protected_attribute_names=dataset.protected_attribute_names, label_names=dataset.label_names)
-
-
-def main():
-    compas = CompasDataset(features_to_drop=['age_cat'])
-    privileged_group = [{'sex': 1, 'race': 1}]
-    unprivileged_group = [{'sex': 0, 'race': 0}]
-    sampler = Sampler(round_level=2)
-    sampled_metrics = classify(
-        make_pipeline(StandardScaler(), LogisticRegression(
-            class_weight='balanced', solver='liblinear')),
-        compas, privileged_group, unprivileged_group, debiaser=sampler, n_splits=5)
-
-
-main()
