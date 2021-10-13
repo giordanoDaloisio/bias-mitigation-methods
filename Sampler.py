@@ -4,12 +4,6 @@ from aif360.datasets import BinaryLabelDataset
 from pandas.core.frame import DataFrame
 from utility import *
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-from aif360.datasets import GermanDataset
-from utility import *
-
 
 def balance_set(w_exp, w_obs, df, tot_df, round_level=None, debug=False):
     disp = round(w_exp / w_obs, round_level) if round_level else w_exp / w_obs
