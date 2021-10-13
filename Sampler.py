@@ -1,6 +1,17 @@
+from sklearn.linear_model import LogisticRegression
+import os
+from utility import *
+from matplotlib.gridspec import GridSpec
+from aif360.algorithms.preprocessing import Reweighing, DisparateImpactRemover
+from aif360.datasets import CompasDataset
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.pipeline import make_pipeline
 from aif360.datasets import BinaryLabelDataset
 from aif360.algorithms import Transformer
 from IPython.display import display
+import numpy as np
+from pandas.core.frame import DataFrame
+
 
 def balance_set(w_exp, w_obs, df, tot_df, round_level=None, debug=False):
     disp = round(w_exp / w_obs, round_level) if round_level else w_exp / w_obs
@@ -11,11 +22,40 @@ def balance_set(w_exp, w_obs, df, tot_df, round_level=None, debug=False):
         elif w_exp / w_obs < 1:
             df = df.drop(df.sample().index, axis=0)
         w_obs = len(df) / len(tot_df)
-        disp = round(w_exp / w_obs, round_level) if round_level else w_exp / w_obs
+        disp = round(
+            w_exp / w_obs, round_level) if round_level else w_exp / w_obs
         disparity.append(disp)
         if debug:
             print(w_exp / w_obs)
     return df, disparity
+
+
+def sample(d: DataFrame, s_vars: list, label: str, round_level: float, i: int = 0, G: list = [], cond: bool = True):
+    d = d.copy()
+    n = len(s_vars)
+    disparities = []
+    if i == n:
+        for l in np.unique(d[label]):
+            g = d[(cond) & (d[label] == l)]
+            w_exp = (len(d[cond])/len(d)) * (len(d[d[label] == l])/len(d))
+            w_obs = len(g)/len(d)
+            g_new, disp = balance_set(w_exp, w_obs, g, d, round_level)
+            disparities.append(disp)
+            G.append(g_new)
+        return G
+    else:
+        s = s_vars[i]
+        i = i+1
+        G1 = sample(d, s_vars, label, round_level, i,
+                    G.copy(), cond=cond & (d[s] == 0))
+        G2 = sample(d, s_vars, label, round_level, i,
+                    G.copy(), cond=cond & (d[s] == 1))
+        G += G1
+        G += G2
+        if len(G) == 2**(n+1):
+            return DataFrame(G.pop().append([g for g in G]).sample(frac=1))
+        else:
+            return G
 
 
 class Sampler(Transformer):
@@ -31,28 +71,21 @@ class Sampler(Transformer):
         return dataset
 
     def fit_transform(self, dataset: BinaryLabelDataset):
-        df = dataset.convert_to_dataframe()[0].copy()
-        fav_label = df[dataset.label_names[0]] == dataset.favorable_label
-        unfav_label = df[dataset.label_names[0]] == dataset.unfavorable_label
 
-        if len(dataset.protected_attribute_names) == 2:
-            s1 = dataset.protected_attribute_names[0]
-            s2 = dataset.protected_attribute_names[1]
-            groups_condition = [(df[s1] == 0) & (df[s2] == 0), (df[s1] == 1) & (df[s2] == 0),
-                                (df[s1] == 0) & (df[s2] == 1), (df[s1] == 1) & (df[s2] == 1)]
-        else:
-            s1 = dataset.protected_attribute_names[0]
-            groups_condition = [(df[s1] == 0), (df[s1] == 1)]
-        groups = [df[cond & fav_label] for cond in groups_condition] + [df[cond & unfav_label] for cond in
-                                                                        groups_condition]        
-        exp_weights = ([(len(df[cond]) / len(df)) * (len(df[fav_label]) / len(df)) for cond in groups_condition] +
-                       [(len(df[cond]) / len(df)) * (len(df[unfav_label]) / len(df)) for cond in groups_condition])
-        obs_weights = [len(group) / len(df) for group in groups]
-        disparities = []
-        for i in range(len(groups)):
-            groups[i], d = balance_set(exp_weights[i], obs_weights[i], groups[i], df, self.round_level, self.debug)
-            disparities.append(d)
-        df_new = groups.pop().append([group for group in groups]).sample(frac=1)
-        return BinaryLabelDataset(df=df_new,
-                                  protected_attribute_names=dataset.protected_attribute_names,
-                                  label_names=dataset.label_names)
+        df_new = sample(dataset.convert_to_dataframe()[0], dataset.protected_attribute_names,
+                        dataset.label_names[0], self.round_level)
+        return BinaryLabelDataset(df=df_new, protected_attribute_names=dataset.protected_attribute_names, label_names=dataset.label_names)
+
+
+def main():
+    compas = CompasDataset(features_to_drop=['age_cat'])
+    privileged_group = [{'sex': 1, 'race': 1}]
+    unprivileged_group = [{'sex': 0, 'race': 0}]
+    sampler = Sampler(round_level=2)
+    sampled_metrics = classify(
+        make_pipeline(StandardScaler(), LogisticRegression(
+            class_weight='balanced', solver='liblinear')),
+        compas, privileged_group, unprivileged_group, debiaser=sampler, n_splits=5)
+
+
+main()

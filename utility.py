@@ -242,49 +242,6 @@ def plot_correlation(dataset: BinaryLabelDataset, s: str):
 
 # classification and sampling functions
 
-def balance_set(w_exp, w_obs, df, tot_df, round_level=None, debug=False):
-    disp = round(w_exp / w_obs, round_level) if round_level else w_exp / w_obs
-    disparity = [disp]
-    while disp != 1:
-        if w_exp / w_obs > 1:
-            df = df.append(df.sample())
-        elif w_exp / w_obs < 1:
-            df = df.drop(df.sample().index, axis=0)
-        w_obs = len(df) / len(tot_df)
-        disp = round(
-            w_exp / w_obs, round_level) if round_level else w_exp / w_obs
-        disparity.append(disp)
-        if debug:
-            print(w_exp / w_obs)
-    return df, disparity
-
-
-def sample_dataset(dataframe: pd.DataFrame,
-                   groups_condition: list,
-                   fav_label: bool,
-                   unfav_label: bool,
-                   protected_attribute_names: list,
-                   label: str,
-                   round_level=None, debug=False):
-    df = dataframe.copy()
-    groups = [df[cond & fav_label] for cond in groups_condition] + \
-        [df[cond & unfav_label] for cond in groups_condition]
-    exp_weights = ([(len(df[cond]) / len(df)) * (len(df[fav_label]) / len(df)) for cond in groups_condition] +
-                   [(len(df[cond]) / len(df)) * (len(df[unfav_label]) / len(df)) for cond in groups_condition])
-    obs_weights = [len(group) / len(df) for group in groups]
-    disparities = []
-    for i in range(len(groups)):
-        groups[i], d = balance_set(
-            exp_weights[i], obs_weights[i], groups[i], df, round_level, debug)
-        disparities.append(d)
-    df_new = groups.pop().append([group for group in groups]).sample(frac=1)
-    print('Original dataset size: (%s,%s)' % dataframe.shape)
-    print('Sampled dataset size: (%s,%s)' % df_new.shape)
-    plot_groups_disparity(disparities)
-    return BinaryLabelDataset(df=df_new, protected_attribute_names=protected_attribute_names, label_names=[label])
-
-
-
 def classify(estimator: Pipeline,
              data: BinaryLabelDataset,
              priv_group: list,
@@ -294,8 +251,6 @@ def classify(estimator: Pipeline,
              n_splits=10,
              debiaser: Transformer = None,
              ):
-    if sensitive_attributes is None:
-        sensitive_attributes = []
     np_data = np.hstack((data.features, data.labels))
     kf = KFold(n_splits=n_splits, shuffle=True)
     dataset_metrics = []
