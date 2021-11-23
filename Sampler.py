@@ -2,7 +2,6 @@ import numpy as np
 from aif360.algorithms import Transformer
 from aif360.datasets import BinaryLabelDataset
 from pandas.core.frame import DataFrame
-from utility import *
 
 
 def balance_set(w_exp, w_obs, df, tot_df, round_level=None, debug=False):
